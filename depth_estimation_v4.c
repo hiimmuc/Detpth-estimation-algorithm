@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
-#include "depth_algorithm.h"
+// #include "depth_algorithm.h"
 
 void img_out(const char *n,int img[][256]){
         
@@ -51,40 +51,109 @@ void img_in(const char *n,int img[][256]){
 /////////////////depth estimation //////////////////
 ///////  修正はここから
 // void depth_estimation(int img1[][256], int img2[][256], int img3[][256]) {
-//    int IMG_SIZE = 256;
-//     int WIN_SIZE = 3;
-//     int MAX_DISP = 30;
-//     int half_win = WIN_SIZE / 2;
-//     int i, j, d, x, y;
 
-//     #pragma omp parallel for private(i, j, d, x, y)
-//     for (j = half_win; j < IMG_SIZE - half_win; j++) {
-//         for (i = half_win; i < IMG_SIZE - half_win; i++) {
-//             int best_disparity = 0;
-//             int min_sad = 999999;
+//     int WIDTH = 256;
+//     int HEIGHT = 256;
+//     int MAX_DISPARITY = 30 ;
 
-//             for (d = 0; d <= MAX_DISP; d++) {
-//                 int sad = 0;
-
-//                 for (y = -half_win; y <= half_win; y++) {
-//                     for (x = -half_win; x <= half_win; x++) {
-//                         int ref_pixel = img1[j + y][i + x];
-//                         int tgt_pixel = (i + x + d < IMG_SIZE) ? img2[j + y][i + x + d] : 0;
-//                         sad += abs(ref_pixel - tgt_pixel);
-//                     }
-//                 }
-
-//                 if (sad < min_sad) {
-//                     min_sad = sad;
-//                     best_disparity = d;
-//                 }
-//             }
-
-//             img3[j][i] = best_disparity;
+//     int i, j, d, a, b;
+//     int min_cost[WIDTH][MAX_DISPARITY];
+//     int accumulated_cost[WIDTH][MAX_DISPARITY];
+    
+//     // Initialize accumulated cost to a large value
+//     for (i = 0; i < WIDTH; ++i) {
+//         for (d = 0; d < MAX_DISPARITY; ++d) {
+//             accumulated_cost[i][d] = 999999;  // Initialize to a large number
 //         }
 //     }
+
+//     // Cost aggregation from left to right direction
+//     for (j = 0; j < HEIGHT ; ++j) {
+//         for (i = 0; i < WIDTH ; ++i) {
+//             for (d = 0; d < MAX_DISPARITY; ++d) {
+//                 min_cost[i][d] = 0;
+//                 for (b = -1; b <= 1; ++b) {
+//                     for (a = -1; a <= 1; ++a) {
+//                         min_cost[i][d] += abs(img1[j + b][i + a] - img2[j + b][i + a + d]);
+//                     }
+//                 }
+//             }
+//         }
+        
+//         // Accumulate costs over disparities
+//         for (i = 0; i < WIDTH ; ++i) {
+//             for (d = 0; d < MAX_DISPARITY; ++d) {
+//                 accumulated_cost[i][d] = accumulated_cost[i][d] < min_cost[i][d] ? accumulated_cost[i][d]  : min_cost[i][d];
+//             }
+//         }
+//     }
+
+//     // Find disparity with minimum accumulated cost
+//     for (j = 0; j < HEIGHT ; ++j) {
+//         for (i = 0; i < WIDTH ; ++i) {
+//             int min_cost_index = 0;
+//             int min_cost_value = accumulated_cost[i][0];
+            
+//             for (d = 1; d < MAX_DISPARITY; ++d) {
+//                 if (accumulated_cost[i][d] < min_cost_value) {
+//                     min_cost_value = accumulated_cost[i][d];
+//                     min_cost_index = d;
+//                 }
+//             }
+            
+//             // Assign disparity to output image
+//             img3[j][i] = min_cost_index;
+//         }
+//     }
+
 // }
 
+void depth_estimation(int img1[][256], int img2[][256], int img3[][256]){
+        /*
+    Sum of Absolute Differences (SAD) or Sum of Squared Differences (SSD), which can be more efficient than the pixel-by-pixel comparison used previously
+    Explanation:
+        Window Size: Use a window of size WIN_SIZE for computing SAD, centered around each pixel.
+        Sum of Absolute Differences (SAD): For each pixel in the image, compute the SAD for different disparities and choose the disparity with the smallest SAD.
+        Handling Boundaries: Ensure that the index does not go out of bounds when computing SAD.
+    Optimizations:
+        Window Size: Using a small window size reduces the computation compared to a 3x3 window around each pixel.
+        Sum of Absolute Differences (SAD): SAD is often faster to compute than a pixel-by-pixel comparison with a counter.
+        Memory Access Pattern: Improved spatial locality by accessing consecutive pixels in memory.
+    */
+    int IMG_SIZE = 256;
+    int WIN_SIZE = 5;
+    int MAX_DISP = 30;
+
+    int half_win = WIN_SIZE / 2;
+    int i, j, d, x, y;
+
+    #pragma omp parallel for private(i, j, d, x, y)
+    for (j = half_win; j < IMG_SIZE - half_win; j++) {
+        for (i = half_win; i < IMG_SIZE - half_win; i++) {
+            int best_disparity = 0;
+            int min_sad = 999999;
+
+            for (d = 0; d <= MAX_DISP; d++) {
+                int sad = 0;
+
+                for (y = -half_win; y <= half_win; y++) {
+                    for (x = -half_win; x <= half_win; x++) {
+                        int ref_pixel = img1[j + y][i + x];
+                        int tgt_pixel = (i + x + d < IMG_SIZE) ? img2[j + y][i + x + d] : 0;
+                        sad += abs(ref_pixel - tgt_pixel);
+                    }
+                }
+
+                if (sad < min_sad) {
+                    min_sad = sad;
+                    best_disparity = d;
+                }
+            }
+
+            img3[j][i] = best_disparity;
+        }
+    }
+}
 ///////  修正はここまで
 ////////////////////////////////////////////////
 
@@ -122,7 +191,7 @@ int main() {
 
         start_clock = clock();
         
-        depth_estimation_v2(img1,img2,img3);
+        depth_estimation(img1,img2,img3);
         
         end_clock = clock();
 

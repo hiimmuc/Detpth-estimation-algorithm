@@ -134,7 +134,7 @@ void depth_estimation_sgm(int img1[][256], int img2[][256], int img3[][256]) {
                 if (i + d < IMG_SIZE) {
                     C[j][i][d] = abs(img1[j][i] - img2[j][i + d]);
                 } else {
-                    C[j][i][d] = INT_MAX;
+                    C[j][i][d] = 999999;
                 }
             }
         }
@@ -152,7 +152,7 @@ void depth_estimation_sgm(int img1[][256], int img2[][256], int img3[][256]) {
                     if (dir == 2 && j > 0) j_prev--;       // top-bottom
                     if (dir == 3 && j < IMG_SIZE - 1) j_prev++; // bottom-top
 
-                    int min_prev_L = INT_MAX;
+                    int min_prev_L = 999999;
                     if (i_prev >= 0 && i_prev < IMG_SIZE && j_prev >= 0 && j_prev < IMG_SIZE) {
                         for (int dp = 0; dp <= MAX_DISP; dp++) {
                             min_prev_L = (Lr[dir][j_prev][i_prev][dp] < min_prev_L) ? Lr[dir][j_prev][i_prev][dp] : min_prev_L;
@@ -185,7 +185,7 @@ void depth_estimation_sgm(int img1[][256], int img2[][256], int img3[][256]) {
     for (j = 0; j < IMG_SIZE; j++) {
         for (i = 0; i < IMG_SIZE; i++) {
             int best_d = 0;
-            int min_cost = INT_MAX;
+            int min_cost = 999999;
             for (d = 0; d <= MAX_DISP; d++) {
                 if (S[j][i][d] < min_cost) {
                     min_cost = S[j][i][d];
