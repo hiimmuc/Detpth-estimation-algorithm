@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+#include "depth_algorithm.h"
 
 void img_out(const char *n,int img[][256]){
         
@@ -49,60 +50,41 @@ void img_in(const char *n,int img[][256]){
 
 /////////////////depth estimation //////////////////
 ///////  修正はここから
+// void depth_estimation(int img1[][256], int img2[][256], int img3[][256]) {
+//    int IMG_SIZE = 256;
+//     int WIN_SIZE = 3;
+//     int MAX_DISP = 30;
+//     int half_win = WIN_SIZE / 2;
+//     int i, j, d, x, y;
 
-// void depth_estimation(int img1[][256],int img2[][256],int img3[][256]){
-//     int i,j,a,b;
-//     int d,d2,dmin,dt;
+//     #pragma omp parallel for private(i, j, d, x, y)
+//     for (j = half_win; j < IMG_SIZE - half_win; j++) {
+//         for (i = half_win; i < IMG_SIZE - half_win; i++) {
+//             int best_disparity = 0;
+//             int min_sad = 999999;
 
-//     for (j=10; j < 256-10;j++){
-//         for (i=10 ;i<256-10;i++){
-//             d2=0;dmin=999999;
+//             for (d = 0; d <= MAX_DISP; d++) {
+//                 int sad = 0;
 
-//             for (d = 0; d <=30; d++){
-//                 dt=0;
-//                 for (b=-1;b<=1;b++){
-//                     for (a=-1;a<=1;a++){
-//                         if (img1[j+b][i+a]!=img2[j+b][i+a+d]){
-//                             dt ++;
-//                         }                       
-//                     }   
-//                 } 
-//                 if (dmin > dt ) {
-//                     d2 = d;
-//                     dmin = dt;
+//                 for (y = -half_win; y <= half_win; y++) {
+//                     for (x = -half_win; x <= half_win; x++) {
+//                         int ref_pixel = img1[j + y][i + x];
+//                         int tgt_pixel = (i + x + d < IMG_SIZE) ? img2[j + y][i + x + d] : 0;
+//                         sad += abs(ref_pixel - tgt_pixel);
+//                     }
 //                 }
-//             }    
-//         img3[j][i] = d2;
+
+//                 if (sad < min_sad) {
+//                     min_sad = sad;
+//                     best_disparity = d;
+//                 }
+//             }
+
+//             img3[j][i] = best_disparity;
 //         }
 //     }
 // }
-void depth_estimation(int img1[][256], int img2[][256], int img3[][256]) {
-    int i, j, a, b;
-    int d, d2, dmin, dt;
-    
-    for (j = 10; j < 246; j++) {
-        for (i = 10; i < 246; i++) {
-            d2 = 0;
-            dmin = 999999;
-            
-            for (d = 0; d <= 30; d++) {
-                dt = 0;
-                for (b = -1; b <= 1; b++) {
-                    for (a = -1; a <= 1; a++) {
-                        int idx1 = img1[j + b][i + a];
-                        int idx2 = img2[j + b][i + a + d];
-                        dt += (idx1 != idx2);
-                    }
-                }
-                if (dmin > dt) {
-                    d2 = d;
-                    dmin = dt;
-                }
-            }
-            img3[j][i] = d2;
-        }
-    }
-}
+
 ///////  修正はここまで
 ////////////////////////////////////////////////
 
@@ -140,7 +122,7 @@ int main() {
 
         start_clock = clock();
         
-        depth_estimation(img1,img2,img3);
+        depth_estimation_v2(img1,img2,img3);
         
         end_clock = clock();
 
