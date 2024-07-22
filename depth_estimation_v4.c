@@ -60,8 +60,14 @@ void depth_estimation(int img1[][256], int img2[][256], int img3[][256]) {
     int DIRECTIONS =8;
 
     int directions[8][2] = {
-    {0, 1}, {1, 0}, {1, 1}, {1, -1},
-    {0, -1}, {-1, 0}, {-1, -1}, {-1, 1}
+        {0, 1}, 
+        {1, 0}, 
+        {1, 1}, 
+        {1, -1},
+        {0, -1}, 
+        {-1, 0}, 
+        {-1, -1}, 
+        {-1, 1}
     };
 
     // int i, j, d, a, b;
@@ -148,7 +154,7 @@ void depth_estimation(int img1[][256], int img2[][256], int img3[][256]) {
             img3[j][i] = best_disparity;
         }
     }
-    
+
 }
 
 // void depth_estimation(int img1[][256], int img2[][256], int img3[][256]){
