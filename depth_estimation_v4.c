@@ -49,142 +49,118 @@ void img_in(const char *n,int img[][256]){
 
 /////////////////depth estimation //////////////////
 ///////  修正はここから
-// void depth_estimation(int img1[][256], int img2[][256], int img3[][256]) {
+void depth_estimation(int img1[][256], int img2[][256], int img3[][256]) {
 
-//     int IMG_SIZE = 256;
-//     int WIN_SIZE = 5;
-//     int MAX_DISP= 30;
-//     int P1 =10;// Penalty for disparity difference of 1
-//     int P2 =150 ;// Penalty for larger disparity differences
-//     int DIRECTIONS =8;
-
-//     int directions[8][2] = {
-//         {0, 1}, 
-//         {1, 0}, 
-//         {1, 1}, 
-//         {1, -1},
-//         {0, -1}, 
-//         {-1, 0}, 
-//         {-1, -1}, 
-//         {-1, 1}
-//     };
-
-//     // int i, j, d, a, b;
-
-//     int half_win = WIN_SIZE / 2;
-//     int cost[256][256][30 + 1];
-//     int aggr_cost[256][256][30 + 1];
-//     int disp_range = MAX_DISP + 1;
-    
-//     // Compute initial cost (SAD)
-//     #pragma omp parallel for collapse(2)
-//     for (int j = half_win; j < IMG_SIZE - half_win; j++) {
-//         for (int i = half_win; i < IMG_SIZE - half_win; i++) {
-//             for (int d = 0; d <= MAX_DISP; d++) {
-//                 int sad = 0;
-//                 for (int y = -half_win; y <= half_win; y++) {
-//                     for (int x = -half_win; x <= half_win; x++) {
-//                         int ref_pixel = img1[j + y][i + x];
-//                         int tgt_pixel = (i + x + d < IMG_SIZE) ? img2[j + y][i + x + d] : 0;
-//                         sad += abs(ref_pixel - tgt_pixel);
-//                     }
-//                 }
-//                 cost[j][i][d] = sad;
-//             }
-//         }
-//     }
-
-//     // Initialize aggregated cost with initial cost
-//     #pragma omp parallel for collapse(2)
-//     for (int d = 0; d < disp_range; d++) {
-//         for (int j = 0; j < IMG_SIZE; j++) {
-//             for (int i = 0; i < IMG_SIZE; i++) {
-//                 aggr_cost[j][i][d] = cost[j][i][d];
-//             }
-//         }
-//     }
-//     // Aggregate costs along multiple directions
-//     for (int dir = 0; dir < DIRECTIONS; dir++) {
-//         int dx = directions[dir][0];
-//         int dy = directions[dir][1];
-
-//         int start_x = (dx > 0) ? 0 : IMG_SIZE - 1;
-//         int end_x = (dx > 0) ? IMG_SIZE : -1;
-//         int start_y = (dy > 0) ? 0 : IMG_SIZE - 1;
-//         int end_y = (dy > 0) ? IMG_SIZE : -1;
-
-//         for (int j = start_y; j != end_y; j += dy) {
-//             for (int i = start_x; i != end_x; i += dx) {
-//                 for (int d = 0; d < disp_range; d++) {
-//                     int min_cost = aggr_cost[j][i][d];
-//                     if (i - dx >= 0 && i - dx < IMG_SIZE && j - dy >= 0 && j - dy < IMG_SIZE) {
-//                         min_cost = aggr_cost[j - dy][i - dx][d];
-
-//                         if (d > 0) {
-//                             min_cost = min_cost < (aggr_cost[j - dy][i - dx][d - 1] + P1) ? min_cost : (aggr_cost[j - dy][i - dx][d - 1] + P1);
-//                         }
-
-//                         if (d < disp_range - 1) {
-//                             min_cost = min_cost < (aggr_cost[j - dy][i - dx][d + 1] + P1) ? min_cost : (aggr_cost[j - dy][i - dx][d + 1] + P1);
-//                         }
-
-//                         min_cost = min_cost < (aggr_cost[j - dy][i - dx][d] + P2) ? min_cost : (aggr_cost[j - dy][i - dx][d] + P2);
-//                     }
-//                     aggr_cost[j][i][d] = cost[j][i][d] + min_cost;
-//                 }
-//             }
-//         }
-//     }
-//     printf("Select");
-//     // Select disparity with minimum aggregated cost
-//     #pragma omp parallel for collapse(2)
-//     for (int j = 0; j < IMG_SIZE; j++) {
-//         for (int i = 0; i < IMG_SIZE; i++) {
-//             int best_disparity = 0;
-//             int min_cost = aggr_cost[j][i][0];
-
-//             for (int d = 1; d < disp_range; d++) {
-//                 if (aggr_cost[j][i][d] < min_cost) {
-//                     min_cost = aggr_cost[j][i][d];
-//                     best_disparity = d;
-//                 }
-//             }
-
-//             img3[j][i] = best_disparity;
-//         }
-//     }
-
-// }
-
-void depth_estimation(int img1[][256], int img2[][256], int img3[][256]){
-    /*
-    Sum of Absolute Differences (SAD) or Sum of Squared Differences (SSD), which can be more efficient than the pixel-by-pixel comparison used previously
-    Explanation:
-        Window Size: Use a window of size WIN_SIZE for computing SAD, centered around each pixel.
-        Sum of Absolute Differences (SAD): For each pixel in the image, compute the SAD for different disparities and choose the disparity with the smallest SAD.
-        Handling Boundaries: Ensure that the index does not go out of bounds when computing SAD.
-    Optimizations:
-        Window Size: Using a small window size reduces the computation compared to a 3x3 window around each pixel.
-        Sum of Absolute Differences (SAD): SAD is often faster to compute than a pixel-by-pixel comparison with a counter.
-        Memory Access Pattern: Improved spatial locality by accessing consecutive pixels in memory.
-    */
-   
     int IMG_SIZE = 256;
-    int WIN_SIZE = 9;
-    int MAX_DISP = 30;
+    int WIN_SIZE = 5;
+    int MAX_DISP= 30;
+    int P1 = 10;// Penalty for disparity difference of 1
+    int P2 = 150 ;// Penalty for larger disparity differences
+    int DIRECTIONS =8;
+
+    int directions[8][2] = {
+        {0, 1}, 
+        {1, 0}, 
+        {1, 1}, 
+        {1, -1},
+        {0, -1}, 
+        {-1, 0}, 
+        {-1, -1}, 
+        {-1, 1}
+    };
+
+    // int i, j, d, a, b;
 
     int half_win = WIN_SIZE / 2;
+    int cost[256][256][30 + 1] = {0};
+    int aggr_cost[256][256][30 + 1] = {0};
+    int disp_range = MAX_DISP + 1;
     int edge_margin = 10;
 
-    #pragma omp parallel for collapse(2)
-    for (int j = edge_margin + half_win; j < IMG_SIZE - edge_margin - half_win; j++) {
-        for (int i = edge_margin + half_win; i < IMG_SIZE - edge_margin - half_win; i++) {
-            int best_disparity = 0;
-            int min_sad = 99999;
+    
+    // // Compute initial cost (SAD)
+    // #pragma omp parallel for collapse(2)
+    // for (int j = edge_margin + half_win; j < IMG_SIZE - edge_margin - half_win; j++) {
+    //     for (int i = edge_margin + half_win; i < IMG_SIZE - edge_margin - half_win; i++) {
+    //         for (int d = 0; d <= MAX_DISP; d++) {
+    //             int sad = 0;
+    //             for (int y = -half_win; y <= half_win; y++) {
+    //                 for (int x = -half_win; x <= half_win; x++) {
+    //                     int ref_pixel = img1[j + y][i + x];
+    //                     int tgt_pixel = (i + x + d < IMG_SIZE) ? img2[j + y][i + x + d] : 0;
+    //                     sad += abs(ref_pixel - tgt_pixel);
+    //                 }
+    //             }
+    //             cost[j][i][d] = sad;
+    //         }
+    //     }
+    // }
 
+    // // Initialize aggregated cost with initial cost
+    // #pragma omp parallel for collapse(2)
+    // for (int d = 0; d < disp_range; d++) {
+    //     for (int j = edge_margin; j < IMG_SIZE - edge_margin; j++) {
+    //         for (int i = edge_margin; i < IMG_SIZE - edge_margin; i++) {
+    //             aggr_cost[j][i][d] = cost[j][i][d];
+    //         }
+    //     }
+    // }
+    // // Aggregate costs along multiple directions
+    // for (int dir = 0; dir < DIRECTIONS; dir++) {
+    //     int dx = directions[dir][0];
+    //     int dy = directions[dir][1];
+
+    //     int start_x = (dx > 0) ? 0 : IMG_SIZE - 1;
+    //     int end_x = (dx > 0) ? IMG_SIZE : -1;
+    //     int start_y = (dy > 0) ? 0 : IMG_SIZE - 1;
+    //     int end_y = (dy > 0) ? IMG_SIZE : -1;
+
+    //     for (int j = start_y; j != end_y; j += dy) {
+    //         for (int i = start_x; i != end_x; i += dx) {
+    //             for (int d = 0; d < disp_range; d++) {
+    //                 int min_cost = aggr_cost[j][i][d];
+    //                 if (i - dx >= 0 && i - dx < IMG_SIZE && j - dy >= 0 && j - dy < IMG_SIZE) {
+    //                     min_cost = aggr_cost[j - dy][i - dx][d];
+
+    //                     if (d > 0) {
+    //                         min_cost = min_cost < (aggr_cost[j - dy][i - dx][d - 1] + P1) ? min_cost : (aggr_cost[j - dy][i - dx][d - 1] + P1);
+    //                     }
+
+    //                     if (d < disp_range - 1) {
+    //                         min_cost = min_cost < (aggr_cost[j - dy][i - dx][d + 1] + P1) ? min_cost : (aggr_cost[j - dy][i - dx][d + 1] + P1);
+    //                     }
+
+    //                     min_cost = min_cost < (aggr_cost[j - dy][i - dx][d] + P2) ? min_cost : (aggr_cost[j - dy][i - dx][d] + P2);
+    //                 }
+    //                 aggr_cost[j][i][d] = cost[j][i][d] + min_cost;
+    //             }
+    //         }
+    //     }
+    // }
+
+    // // Select disparity with minimum aggregated cost
+    // #pragma omp parallel for collapse(2)
+    // for (int j = edge_margin; j < IMG_SIZE -edge_margin; j++) {
+    //     for (int i = edge_margin; i < IMG_SIZE - edge_margin; i++) {
+    //         int best_disparity = 0;
+    //         int min_cost = aggr_cost[j][i][0];
+
+    //         for (int d = 1; d < disp_range; d++) {
+    //             if (aggr_cost[j][i][d] < min_cost) {
+    //                 min_cost = aggr_cost[j][i][d];
+    //                 best_disparity = d;
+    //             }
+    //         }
+
+    //         img3[j][i] = best_disparity;
+    //     }
+    // }
+        // Compute initial cost (SAD)
+    #pragma omp parallel for collapse(2)
+    for (int j = edge_margin; j < IMG_SIZE - edge_margin; j++) {
+        for (int i = edge_margin; i < IMG_SIZE - edge_margin; i++) {
             for (int d = 0; d <= MAX_DISP; d++) {
                 int sad = 0;
-
                 for (int y = -half_win; y <= half_win; y++) {
                     for (int x = -half_win; x <= half_win; x++) {
                         int ref_pixel = img1[j + y][i + x];
@@ -192,17 +168,136 @@ void depth_estimation(int img1[][256], int img2[][256], int img3[][256]){
                         sad += abs(ref_pixel - tgt_pixel);
                     }
                 }
+                cost[j][i][d] = sad;
+            }
+        }
+    }
 
-                if (sad < min_sad) {
-                    min_sad = sad;
+    // Initialize aggregated cost with initial cost
+    #pragma omp parallel for collapse(2)
+    for (int d = 0; d < disp_range; d++) {
+        for (int j = 0; j < IMG_SIZE; j++) {
+            for (int i = 0; i < IMG_SIZE; i++) {
+                aggr_cost[j][i][d] = cost[j][i][d];
+            }
+        }
+    }
+
+    // Aggregate costs along multiple directions
+    for (int dir = 0; dir < DIRECTIONS; dir++) {
+        int dx = directions[dir][0];
+        int dy = directions[dir][1];
+
+        int start_x = (dx > 0) ? edge_margin : IMG_SIZE - edge_margin - 1;
+        int end_x = (dx > 0) ? IMG_SIZE - edge_margin : edge_margin - 1;
+        int start_y = (dy > 0) ? edge_margin : IMG_SIZE - edge_margin - 1;
+        int end_y = (dy > 0) ? IMG_SIZE - edge_margin : edge_margin - 1;
+
+        for (int j = start_y; j != end_y; j += dy) {
+            for (int i = start_x; i != end_x; i += dx) {
+                for (int d = 0; d < disp_range; d++) {
+                    int min_cost = aggr_cost[j][i][d];
+                    if (i - dx >= edge_margin && i - dx < IMG_SIZE - edge_margin && j - dy >= edge_margin && j - dy < IMG_SIZE - edge_margin) {
+                        min_cost = aggr_cost[j - dy][i - dx][d];
+
+                        if (d > 0) {
+                            min_cost = min_cost < (aggr_cost[j - dy][i - dx][d - 1] + P1) ? min_cost : (aggr_cost[j - dy][i - dx][d - 1] + P1);
+                        }
+
+                        if (d < disp_range - 1) {
+                            min_cost = min_cost < (aggr_cost[j - dy][i - dx][d + 1] + P1) ? min_cost : (aggr_cost[j - dy][i - dx][d + 1] + P1);
+                        }
+
+                        min_cost = min_cost < (aggr_cost[j - dy][i - dx][d] + P2) ? min_cost : (aggr_cost[j - dy][i - dx][d] + P2);
+                    }
+                    aggr_cost[j][i][d] = cost[j][i][d] + min_cost;
+                }
+            }
+        }
+    }
+
+    // Select disparity with minimum aggregated cost
+    #pragma omp parallel for collapse(2)
+    for (int j = edge_margin; j < IMG_SIZE - edge_margin; j++) {
+        for (int i = edge_margin; i < IMG_SIZE - edge_margin; i++) {
+            int best_disparity = 0;
+            int min_cost = aggr_cost[j][i][0];
+
+            for (int d = 1; d < disp_range; d++) {
+                if (aggr_cost[j][i][d] < min_cost) {
+                    min_cost = aggr_cost[j][i][d];
                     best_disparity = d;
                 }
             }
-
             img3[j][i] = best_disparity;
         }
     }
+
+    // Zero out the edge margin
+    #pragma omp parallel for collapse(2)
+    for (int j = 0; j < IMG_SIZE; j++) {
+        for (int i = 0; i < edge_margin; i++) {
+            img3[j][i] = 0;
+            img3[j][IMG_SIZE - i - 1] = 0;
+        }
+    }
+    #pragma omp parallel for collapse(2)
+    for (int j = 0; j < edge_margin; j++) {
+        for (int i = 0; i < IMG_SIZE; i++) {
+            img3[j][i] = 0;
+            img3[IMG_SIZE - j - 1][i] = 0;
+        }
+    }
+
 }
+
+// void depth_estimation(int img1[][256], int img2[][256], int img3[][256]){
+//     /*
+//     Sum of Absolute Differences (SAD) or Sum of Squared Differences (SSD), which can be more efficient than the pixel-by-pixel comparison used previously
+//     Explanation:
+//         Window Size: Use a window of size WIN_SIZE for computing SAD, centered around each pixel.
+//         Sum of Absolute Differences (SAD): For each pixel in the image, compute the SAD for different disparities and choose the disparity with the smallest SAD.
+//         Handling Boundaries: Ensure that the index does not go out of bounds when computing SAD.
+//     Optimizations:
+//         Window Size: Using a small window size reduces the computation compared to a 3x3 window around each pixel.
+//         Sum of Absolute Differences (SAD): SAD is often faster to compute than a pixel-by-pixel comparison with a counter.
+//         Memory Access Pattern: Improved spatial locality by accessing consecutive pixels in memory.
+//     */
+   
+//     int IMG_SIZE = 256;
+//     int WIN_SIZE = 9;
+//     int MAX_DISP = 30;
+
+//     int half_win = WIN_SIZE / 2;
+//     int edge_margin = 10;
+
+//     #pragma omp parallel for collapse(2)
+//     for (int j = edge_margin + half_win; j < IMG_SIZE - edge_margin - half_win; j++) {
+//         for (int i = edge_margin + half_win; i < IMG_SIZE - edge_margin - half_win; i++) {
+//             int best_disparity = 0;
+//             int min_sad = 99999;
+
+//             for (int d = 0; d <= MAX_DISP; d++) {
+//                 int sad = 0;
+
+//                 for (int y = -half_win; y <= half_win; y++) {
+//                     for (int x = -half_win; x <= half_win; x++) {
+//                         int ref_pixel = img1[j + y][i + x];
+//                         int tgt_pixel = (i + x + d < IMG_SIZE) ? img2[j + y][i + x + d] : 0;
+//                         sad += abs(ref_pixel - tgt_pixel);
+//                     }
+//                 }
+
+//                 if (sad < min_sad) {
+//                     min_sad = sad;
+//                     best_disparity = d;
+//                 }
+//             }
+
+//             img3[j][i] = best_disparity;
+//         }
+//     }
+// }
 /////  修正はここまで
 //////////////////////////////////////////////
 
